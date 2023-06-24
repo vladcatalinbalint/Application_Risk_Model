@@ -58,7 +58,7 @@ def replace_outliers_with_whiskers(dataframe, multiplier=1.5):
         )
 
 
-def woe_transform_dataframe(df, target_col, event=1, bins=10):
+def woe_transform_dataframe(df, target_col, event=1, bins=10, min_bin_size=0.05):
     woe_dict = {}
     
     for col in df.columns:
@@ -86,12 +86,14 @@ def woe_transform_dataframe(df, target_col, event=1, bins=10):
                 x_bins = pd.cut(df[col], bins=bins, duplicates='drop')
             except ValueError:
                 x_bins = pd.cut(df[col], duplicates='drop')
-                
+            
+            bin_counts = x_bins.value_counts(normalize=True)
+            valid_bins = bin_counts[bin_counts >= min_bin_size].index
             event_total = df[target_col].sum()
             non_event_total = df[target_col].count() - event_total
             woe_col_dict = {}
             
-            for bin_label in x_bins.unique():
+            for bin_label in valid_bins:
                 event_count = df.loc[x_bins == bin_label, target_col].sum()
                 non_event_count = df.loc[x_bins == bin_label, target_col].count() - event_count
                 

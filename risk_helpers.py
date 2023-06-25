@@ -74,7 +74,9 @@ def woe_transform_dataframe(df, target_col, event=1, bins=10, min_bin_size=0.05)
                 
                 # Check if event or non-event count is zero
                 if event_count == 0 or non_event_count == 0:
-                    woe_col_dict[label] = np.nan
+                    # Calculate the average WoE for the feature
+                    avg_woe = np.mean(list(woe_col_dict.values()))
+                    woe_col_dict[label] = avg_woe
                 else:
                     woe = np.log((event_count / event_total) / (non_event_count / non_event_total))
                     woe_col_dict[label] = woe
@@ -99,7 +101,9 @@ def woe_transform_dataframe(df, target_col, event=1, bins=10, min_bin_size=0.05)
                 
                 # Check if event or non-event count is zero
                 if event_count == 0 or non_event_count == 0:
-                    woe_col_dict[bin_label] = np.nan
+                    # Calculate the average WoE for the feature
+                    avg_woe = np.mean(list(woe_col_dict.values()))
+                    woe_col_dict[bin_label] = avg_woe
                 else:
                     woe = np.log((event_count / event_total) / (non_event_count / non_event_total))
                     woe_col_dict[bin_label] = woe
@@ -107,6 +111,7 @@ def woe_transform_dataframe(df, target_col, event=1, bins=10, min_bin_size=0.05)
             woe_dict[col] = woe_col_dict
     
     return woe_dict
+
 
 
 def transform_to_woe(df, woe_dict, replace_outliers=True, outlier_threshold=3):
@@ -135,4 +140,31 @@ def transform_to_woe(df, woe_dict, replace_outliers=True, outlier_threshold=3):
             )
     
     return transformed_df
+
+def calculate_psi(expected, observed):
+    epsilon = 1e-10  # Small value to avoid division by zero
+    expected = np.asarray(expected) + epsilon
+    observed = np.asarray(observed) + epsilon
+
+    # Calculate the expected and observed event rates
+    expected_rate = expected / np.sum(expected)
+    observed_rate = observed / np.sum(observed)
+
+    # Calculate the PSI for each category
+    psi = (observed_rate - expected_rate) * np.log(observed_rate / expected_rate)
+    psi = np.sum(psi)
+
+    return psi
+
+def calculate_psi_dataframe(dataframe, reference_df):
+    psi_results = pd.DataFrame(columns=['Feature', 'PSI'])
+
+    for feature in dataframe.columns:
+        expected_freq = reference_df[feature].values
+        observed_freq = dataframe[feature].values
+
+        psi = calculate_psi(expected_freq, observed_freq)
+        psi_results = psi_results.append({'Feature': feature, 'PSI': psi}, ignore_index=True)
+
+    return psi_results
 
